@@ -14,6 +14,8 @@ export interface Task {
   completed: boolean;
   createdAt: string;
   updatedAt: string;
+  deadline: string;
+  color: string;
 }
 
 export const TasksAPI = {

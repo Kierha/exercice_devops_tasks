@@ -1,30 +1,27 @@
-import { useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Modal, TextInput, Button } from 'react-native';
 import { useTaskStore } from '@/stores/taskStore';
 import { Plus, Trash2 } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+const COLORS = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF'];
 
 export default function TasksScreen() {
-  const { tasks, isLoading, error, fetchTasks, deleteTask, updateTask } = useTaskStore();
+  const { tasks, isLoading, error, fetchTasks, deleteTask, updateTask, addTask } = useTaskStore();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [title, setTitle] = useState('');
+  const [deadline, setDeadline] = useState(new Date());
+  const [color, setColor] = useState(COLORS[0]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
-
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <Text>Loading tasks...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
-    );
-  }
+  const handleAddTask = () => {
+    if (!title.trim()) return;
+    addTask({ title, description: '', deadline: deadline.toISOString(), color, completed: false });
+    setTitle('');
+    setDeadline(new Date());
+    setColor(COLORS[0]);
+    setModalVisible(false);
+  };
 
   return (
     <View style={styles.container}>
@@ -53,7 +50,44 @@ export default function TasksScreen() {
           </View>
         )}
       />
-      <Pressable style={styles.fab} testID='add-button'>
+
+      {/* Modal d'ajout de tâche */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Ajouter une tâche</Text>
+            <TextInput
+              placeholder="Titre de la tâche"
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+            />
+            <Pressable onPress={() => setShowDatePicker(true)} style={styles.datePickerButton}>
+              <Text>Sélectionner une date: {deadline.toLocaleDateString()}</Text>
+            </Pressable>
+            {showDatePicker && (
+              <DateTimePicker
+                value={deadline}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) setDeadline(selectedDate);
+                }}
+              />
+            )}
+            <View style={styles.colorSelector}>
+              {COLORS.map((c) => (
+                <Pressable key={c} onPress={() => setColor(c)} style={[styles.colorOption, { backgroundColor: c, borderWidth: color === c ? 2 : 0 }]} />
+              ))}
+            </View>
+            <Button title="Ajouter" onPress={handleAddTask} />
+            <Button title="Annuler" color="red" onPress={() => setModalVisible(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Pressable style={styles.fab} onPress={() => setModalVisible(true)}>
         <Plus size={24} color="#FFFFFF" />
       </Pressable>
     </View>
@@ -115,6 +149,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { width: '80%', backgroundColor: '#FFF', padding: 20, borderRadius: 10 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  input: { borderBottomWidth: 1, borderBottomColor: '#CCC', marginBottom: 10, padding: 8 },
+  datePickerButton: { padding: 10, backgroundColor: '#EEE', borderRadius: 5, marginBottom: 10, alignItems: 'center' },
+  colorSelector: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 10 },
+  colorOption: { width: 30, height: 30, borderRadius: 15, marginHorizontal: 5 },
   errorText: {
     color: '#FF3B30',
     textAlign: 'center',

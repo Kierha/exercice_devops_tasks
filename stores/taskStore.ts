@@ -9,23 +9,26 @@ interface TaskStore {
   createTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateTask: (id: string, task: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
 }
 
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   isLoading: false,
   error: null,
+
   fetchTasks: async () => {
     set({ isLoading: true, error: null });
     try {
       const response = await TasksAPI.getTasks();
       set({ tasks: response.data });
-    } catch  {
+    } catch {
       set({ error: 'Failed to fetch tasks' });
     } finally {
       set({ isLoading: false });
     }
   },
+
   createTask: async (task) => {
     set({ isLoading: true, error: null });
     try {
@@ -37,6 +40,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       set({ isLoading: false });
     }
   },
+
   updateTask: async (id, task) => {
     set({ isLoading: true, error: null });
     try {
@@ -44,21 +48,40 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       set({
         tasks: get().tasks.map((t) => (t.id === id ? response.data : t)),
       });
-    } catch  {
+    } catch {
       set({ error: 'Failed to update task' });
     } finally {
       set({ isLoading: false });
     }
   },
+
   deleteTask: async (id) => {
     set({ isLoading: true, error: null });
     try {
       await TasksAPI.deleteTask(id);
       set({ tasks: get().tasks.filter((t) => t.id !== id) });
-    } catch  {
+    } catch {
       set({ error: 'Failed to delete task' });
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  addTask: (task) => {
+    set((state) => ({
+      tasks: [
+        ...state.tasks,
+        {
+          id: Math.random().toString(), // Générer un ID temporaire
+          title: task.title,
+          description: task.description || '',
+          completed: task.completed || false,
+          deadline: task.deadline ? new Date(task.deadline).toISOString() : new Date().toISOString(),
+          color: task.color || '#007AFF',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    }));
   },
 }));
